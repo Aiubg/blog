@@ -1,0 +1,216 @@
+<script>
+import { themeConfig } from '@/config'
+
+const userSoundConfig = themeConfig.sound
+const config = {
+  enabled: userSoundConfig?.enabled ?? true,
+  mobileEnabled: userSoundConfig?.mobileEnabled ?? false,
+  basePath: userSoundConfig?.basePath ?? null,
+  click: {
+    enabled: userSoundConfig?.click?.enabled ?? true,
+    volume: userSoundConfig?.click?.volume ?? 0.8,
+  },
+  typing: {
+    enabled: userSoundConfig?.typing?.enabled ?? true,
+    volume: userSoundConfig?.typing?.volume ?? 0.4,
+  },
+}
+
+const soundTypes = {
+  click: 'tap',
+  typing: 'type',
+} as const
+
+type SoundType = (typeof soundTypes)[keyof typeof soundTypes]
+
+function getVolume(type: SoundType) {
+  if (type === soundTypes.click)
+    return config.click.volume
+  if (type === soundTypes.typing)
+    return config.typing.volume
+  return 0.5
+}
+
+const clickTargets = ['#language-switcher', '#theme-toggle-button'] as const
+
+const typingTargets = [
+  // Twikoo
+  '.el-input__inner',
+  '.el-textarea__inner',
+  // Waline
+  '#wl-nick',
+  '#wl-mail',
+  '#wl-link',
+  '#wl-edit',
+] as const
+
+const ignoredKeys = new Set([
+  'Shift',
+  'Control',
+  'Alt',
+  'Meta',
+  'Tab',
+  'Escape',
+  'CapsLock',
+])
+
+const clickSelector = clickTargets.join(',')
+const typingSelector = typingTargets.join(',')
+
+function shouldPlayOnMobile(): boolean {
+  const isMobile = window.matchMedia('(max-width: 1023px)').matches
+  if (isMobile && !config.mobileEnabled) {
+    return false
+  }
+  return true
+}
+
+function getBasePath(): string {
+  if (config.basePath) {
+    return config.basePath
+  }
+  const sitemap = document.head.querySelector('link[rel="sitemap"]')
+  const href = sitemap?.getAttribute('href')
+  return href?.replace('/sitemap-index.xml', '') || ''
+}
+
+class SoundEffectManager {
+  private audioContext: AudioContext | null = null
+  private audioBuffers: Record<SoundType, AudioBuffer[]> = {
+    [soundTypes.click]: [],
+    [soundTypes.typing]: [],
+  }
+
+  private initPromise: Promise<void> | null = null
+
+  constructor() {
+    if (!config.enabled)
+      return
+
+    if (shouldPlayOnMobile() && 'requestIdleCallback' in window) {
+      requestIdleCallback(() => this.initialize())
+    }
+  }
+
+  private async fetchAndCacheSound(
+    type: SoundType,
+    index: number,
+  ): Promise<void> {
+    if (!this.audioContext)
+      return
+
+    const soundId = `${type}_0${index + 1}`
+    const path = `${getBasePath()}/${soundId}.wav`
+
+    try {
+      const response = await fetch(path)
+      const arrayBuffer = await response.arrayBuffer()
+      const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer)
+      this.audioBuffers[type].push(audioBuffer)
+    }
+    catch (error) {
+      console.error(`Failed to load sound: ${path}`, error)
+    }
+  }
+
+  private async preloadAllSounds(): Promise<void> {
+    const soundTypeValues = Object.values(soundTypes) as SoundType[]
+    const allPromises = soundTypeValues.flatMap((type) => {
+      if (type === soundTypes.click && !config.click.enabled)
+        return []
+      if (type === soundTypes.typing && !config.typing.enabled)
+        return []
+
+      return Array.from({ length: 5 }, (_, i) =>
+        this.fetchAndCacheSound(type, i))
+    })
+
+    await Promise.allSettled(allPromises)
+  }
+
+  private async initialize(): Promise<void> {
+    if (!config.enabled)
+      return
+
+    return (this.initPromise ??= (async () => {
+      const AudioContextClass
+        = window.AudioContext || window.webkitAudioContext
+      this.audioContext = new AudioContextClass()
+      await this.preloadAllSounds()
+    })())
+  }
+
+  public async playSound(soundType: SoundType): Promise<void> {
+    if (!config.enabled)
+      return
+    if (soundType === soundTypes.click && !config.click.enabled)
+      return
+    if (soundType === soundTypes.typing && !config.typing.enabled)
+      return
+
+    try {
+      await this.initialize()
+
+      if (!this.audioContext)
+        return
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume()
+      }
+
+      const buffers = this.audioBuffers[soundType]
+      if (!buffers || buffers.length === 0)
+        return
+
+      const source = this.audioContext.createBufferSource()
+      source.buffer = buffers[Math.floor(Math.random() * buffers.length)]
+
+      const gainNode = this.audioContext.createGain()
+      gainNode.gain.value = getVolume(soundType)
+
+      source.connect(gainNode).connect(this.audioContext.destination)
+      source.start(0)
+    }
+    catch (error) {
+      console.error('Error playing sound:', error)
+    }
+  }
+}
+
+const soundManager = new SoundEffectManager()
+
+function handleGlobalClick(event: MouseEvent) {
+  if (!shouldPlayOnMobile())
+    return
+  if (!config.click.enabled)
+    return
+
+  const target = event.target as Element | null
+  if (!target?.closest(clickSelector))
+    return
+
+  soundManager.playSound(soundTypes.click)
+}
+
+function handleGlobalKeydown(event: KeyboardEvent) {
+  if (!shouldPlayOnMobile())
+    return
+  if (!config.typing.enabled)
+    return
+
+  if (event.ctrlKey || event.altKey || event.metaKey)
+    return
+  if (ignoredKeys.has(event.key))
+    return
+
+  const target = event.target as Element | null
+  if (!target?.closest(typingSelector))
+    return
+
+  soundManager.playSound(soundTypes.typing)
+}
+
+if (config.enabled) {
+  document.addEventListener('click', handleGlobalClick)
+  document.addEventListener('keydown', handleGlobalKeydown)
+}
+</script>

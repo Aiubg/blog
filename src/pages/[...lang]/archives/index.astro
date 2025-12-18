@@ -1,0 +1,48 @@
+---
+import PostList from '@/components/PostList.astro'
+import { allLocales } from '@/config'
+import { langMap } from '@/i18n/config'
+import { getLangFromLocale, getLangRouteParam } from '@/i18n/lang'
+import Layout from '@/layouts/Layout.astro'
+import { getPosts } from '@/utils/content'
+
+export async function getStaticPaths() {
+  return allLocales.map(lang => ({
+    params: { lang: getLangRouteParam(lang) },
+  }))
+}
+
+const currentLang = getLangFromLocale(Astro.currentLocale)
+const locale = (langMap[currentLang] as readonly string[])[0] ?? 'en-US'
+const allPosts = await getPosts(currentLang)
+
+interface MonthGroup { year: number, month: number, posts: typeof allPosts }
+const monthGroupsMap = new Map<string, MonthGroup>()
+for (const post of allPosts) {
+  const d = post.data.published
+  const year = d.getFullYear()
+  const month = d.getMonth() + 1
+  const key = `${year}-${String(month).padStart(2, '0')}`
+  const group = monthGroupsMap.get(key) ?? { year, month, posts: [] }
+  ;(group.posts as typeof allPosts).push(post)
+  monthGroupsMap.set(key, group)
+}
+
+const monthGroups = [...monthGroupsMap.values()]
+  .sort((a, b) => b.year - a.year || b.month - a.month)
+
+---
+
+<Layout>
+  <div class="uno-decorative-line" />
+  {monthGroups.map(({ year, month, posts }) => (
+    <section class="mb-7.5">
+      <h3 class="mb-3 text-4 c-primary font-bold font-navbar lg:text-4.5">
+        {new Date(year, month - 1, 1).toLocaleDateString(locale, { year: 'numeric', month: 'long' })} ({posts.length})
+      </h3>
+      <div class="uno-decorative-line" />
+      <PostList posts={posts} lang={currentLang} />
+    </section>
+  ))}
+</Layout>
+
