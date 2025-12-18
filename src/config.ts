@@ -12,7 +12,7 @@ export const themeConfig: ThemeConfig = {
     // 使用 src/i18n/ui.ts 中的 i18n 标题/副标题/描述，而不是上面的静态文本
     i18nTitle: true, // true | false
     // 作者名称
-    author: 'mercury',
+    author: 'abid',
     // 网站 URL
     url: 'https://blog.gxqmars.dpdns.org',
     // 基础路径

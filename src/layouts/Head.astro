@@ -154,7 +154,57 @@ const pageImage = postSlug
 })()
 </script>
 
-<!-- Google Analytics -->
+<script
+  is:inline
+  define:vars={{
+    allLocales,
+    defaultLocale,
+    base,
+  }}
+>
+(function () {
+  function stripBase(path) {
+    return base && path.startsWith(base) ? path.slice(base.length) : path
+  }
+  function getLangFromPathname(path) {
+    const pathWithoutBase = stripBase(path)
+    const normalized = pathWithoutBase.replace(/^\/|\/$/g, '')
+    const firstSeg = normalized.split('/')[0] || ''
+    return allLocales.includes(firstSeg) ? firstSeg : defaultLocale
+  }
+  function buildPathWithLang(path, lang) {
+    const pathWithoutBase = stripBase(path)
+    const normalized = pathWithoutBase.replace(/^\/|\/$/g, '')
+    const segments = normalized ? normalized.split('/') : []
+    if (segments.length && allLocales.includes(segments[0])) {
+      segments.shift()
+    }
+    const rest = segments.join('/')
+    const newPath = `${lang === defaultLocale ? '' : `/${lang}`}/${rest}`
+    const finalPath = newPath.replace(/\/+/g, '/')
+    return base ? `${base}${finalPath}` : finalPath
+  }
+  function enforceLanguagePreference() {
+    try {
+      const saved = localStorage.getItem('lang')
+      if (!saved || !allLocales.includes(saved)) {
+        return
+      }
+      const current = getLangFromPathname(location.pathname)
+      if (current !== saved) {
+        const newPath = buildPathWithLang(location.pathname, saved)
+        location.replace(`${newPath}${location.search || ''}${location.hash || ''}`)
+      }
+    }
+    catch {}
+  }
+  document.addEventListener('astro:page-load', enforceLanguagePreference)
+  window.addEventListener('pageshow', enforceLanguagePreference)
+  enforceLanguagePreference()
+})()
+</script>
+
+  <!-- Google Analytics -->
 <!-- Define gtag on window object for proper Partytown forwarding -->
 <!-- See https://github.com/QwikDev/partytown/issues/382 -->
 {googleAnalyticsID && (
