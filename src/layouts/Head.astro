@@ -180,8 +180,9 @@ const pageImage = postSlug
       segments.shift()
     }
     const rest = segments.join('/')
-    const newPath = `${lang === defaultLocale ? '' : `/${lang}`}/${rest}`
-    const finalPath = newPath.replace(/\/+/g, '/')
+    const langPrefix = lang === defaultLocale ? '' : `/${lang}`
+    const localizedPath = rest === '' ? `${langPrefix}/` : `${langPrefix}/${rest}/`
+    const finalPath = localizedPath.replace(/\/+/g, '/')
     return base ? `${base}${finalPath}` : finalPath
   }
   function enforceLanguagePreference() {
