@@ -1,6 +1,7 @@
 import { glob } from 'astro/loaders'
 import { defineCollection, z } from 'astro:content'
-import { allLocales, themeConfig } from '@/config'
+import { themeConfig } from '@/config'
+import { langMap } from '@/i18n/config'
 
 const posts = defineCollection({
   loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/posts' }),
@@ -26,7 +27,7 @@ const posts = defineCollection({
 const about = defineCollection({
   loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/about' }),
   schema: z.object({
-    lang: z.enum(['', ...allLocales]).optional().default(''),
+    lang: z.enum(['', ...Object.keys(langMap)] as [string, ...string[]]).optional().default(''),
   }),
 })
 

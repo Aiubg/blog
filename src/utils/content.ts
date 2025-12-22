@@ -4,6 +4,7 @@ import type { Post } from '@/types'
 import { createHash } from 'node:crypto'
 import { getCollection, render } from 'astro:content'
 import { allLocales, defaultLocale } from '@/config'
+import { langMap } from '@/i18n/config'
 import { memoize } from '@/utils/cache'
 
 const metaCache = new Map<string, { minutes: number }>()
@@ -41,7 +42,7 @@ export function getPostLang(post: CollectionEntry<'posts'>): '' | Language {
   if (first === '_all') {
     return ''
   }
-  if ((allLocales as readonly string[]).includes(first)) {
+  if (Object.prototype.hasOwnProperty.call(langMap, first)) {
     return first as Language
   }
   return ''
@@ -56,7 +57,7 @@ export function getPostGroupKey(post: CollectionEntry<'posts'>): string {
   const segments = id.split('/')
   const last = segments[segments.length - 1] || id
   const base = last.replace(/\.(md|mdx)$/i, '')
-  const langs = allLocales as readonly string[]
+  const langs = Object.keys(langMap) as readonly string[]
   for (const lang of langs) {
     if (base.endsWith(`-${lang}`)) {
       return base.slice(0, -(lang.length + 1))
