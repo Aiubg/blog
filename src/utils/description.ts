@@ -35,6 +35,13 @@ const htmlEntityMap: Record<string, string> = {
   '&nbsp;': ' ',
 }
 
+const htmlEntityPattern = new RegExp(
+  Object.keys(htmlEntityMap)
+    .map(key => key.replace(/([.*+?^${}()|[\]\\])/g, '\\$1'))
+    .join('|'),
+  'g',
+)
+
 // Creates a clean text excerpt with length limits by language and scene
 function getExcerpt(text: string, lang: Language, scene: ExcerptScene): string {
   const isCJK = (lang: Language) => ['zh', 'zh-tw', 'ja', 'ko'].includes(lang)
@@ -46,9 +53,10 @@ function getExcerpt(text: string, lang: Language, scene: ExcerptScene): string {
   let cleanText = text.replace(/<[^>]*>/g, '')
 
   // Decode HTML entities
-  Object.entries(htmlEntityMap).forEach(([entity, char]) => {
-    cleanText = cleanText.replace(new RegExp(entity, 'g'), char)
-  })
+  cleanText = cleanText.replace(
+    htmlEntityPattern,
+    entity => htmlEntityMap[entity] ?? entity,
+  )
 
   // Normalize whitespace
   cleanText = cleanText.replace(/\s+/g, ' ')

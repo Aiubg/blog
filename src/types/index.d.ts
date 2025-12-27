@@ -32,6 +32,28 @@ export interface ThemeConfig {
       background: string
       highlight: string
     }
+    semantic: {
+      note: {
+        light: string
+        dark: string
+      }
+      tip: {
+        light: string
+        dark: string
+      }
+      important: {
+        light: string
+        dark: string
+      }
+      warning: {
+        light: string
+        dark: string
+      }
+      caution: {
+        light: string
+        dark: string
+      }
+    }
   }
   global: {
     locale: Language
