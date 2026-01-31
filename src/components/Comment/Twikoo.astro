@@ -46,10 +46,19 @@ declare const twikoo: any
 
 let twikooObserver: IntersectionObserver | null = null
 let twikooWrapper: HTMLElement | null = null
+const runtime = window as typeof window & {
+  __retypeset?: { listeners?: Record<string, boolean> }
+}
+const retypeset = runtime.__retypeset ?? (runtime.__retypeset = {})
+const listeners = retypeset.listeners ?? (retypeset.listeners = {})
 
 function setupTwikoo() {
   const twikooWrapper = document.getElementById('twikoo-wrapper')
   if (!twikooWrapper || !twikooWrapper.dataset.config) {
+    return
+  }
+
+  if (twikooWrapper.dataset.initialized === 'true') {
     return
   }
 
@@ -64,6 +73,7 @@ function setupTwikoo() {
       path,
       lang,
     })
+    twikooWrapper.dataset.initialized = 'true'
   }
   catch (error) {
     console.error('[Twikoo] Failed to initialize:', error)
@@ -76,6 +86,12 @@ function lazySetupTwikoo() {
   if (!twikooWrapper || !twikooWrapper.dataset.config) {
     return
   }
+
+  if (twikooWrapper.dataset.initialized === 'true') {
+    return
+  }
+
+  twikooObserver?.disconnect()
 
   const config = JSON.parse(twikooWrapper.dataset.config)
   const { twikooCSS } = config
@@ -109,6 +125,11 @@ function cleanupTwikoo() {
   }
 }
 
-document.addEventListener('astro:page-load', lazySetupTwikoo)
-document.addEventListener('astro:before-swap', cleanupTwikoo)
+lazySetupTwikoo()
+
+if (!listeners.twikoo) {
+  listeners.twikoo = true
+  document.addEventListener('astro:page-load', lazySetupTwikoo)
+  document.addEventListener('astro:before-swap', cleanupTwikoo)
+}
 </script>

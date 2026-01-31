@@ -8,6 +8,11 @@ interface GithubRepoData {
 }
 
 const compactNumberFormat = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
+const runtime = window as typeof window & {
+  __retypeset?: { listeners?: Record<string, boolean> }
+}
+const retypeset = runtime.__retypeset ?? (runtime.__retypeset = {})
+const listeners = retypeset.listeners ?? (retypeset.listeners = {})
 
 async function fetchRepoData(repo: string): Promise<GithubRepoData | null> {
   const cacheKey = `github-repo-${repo}`
@@ -95,9 +100,18 @@ function setupGithubCards() {
   }
 
   cards.forEach((card) => {
+    if (card.dataset.gcLoaded) {
+      return
+    }
+    card.dataset.gcLoaded = 'true'
     loadRepoData(card)
   })
 }
 
-document.addEventListener('astro:page-load', setupGithubCards)
+setupGithubCards()
+
+if (!listeners.githubCard) {
+  listeners.githubCard = true
+  document.addEventListener('astro:page-load', setupGithubCards)
+}
 </script>

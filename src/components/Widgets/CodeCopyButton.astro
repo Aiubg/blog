@@ -1,5 +1,10 @@
 <script>
 const timeoutMap = new WeakMap<Element, number>()
+const runtime = window as typeof window & {
+  __retypeset?: { listeners?: Record<string, boolean> }
+}
+const retypeset = runtime.__retypeset ?? (runtime.__retypeset = {})
+const listeners = retypeset.listeners ?? (retypeset.listeners = {})
 
 async function handleCodeCopyClick(e: MouseEvent) {
   if (!(e.target instanceof Element)) {
@@ -43,5 +48,8 @@ async function handleCodeCopyClick(e: MouseEvent) {
   timeoutMap.set(button, timeoutId)
 }
 
-document.addEventListener('click', handleCodeCopyClick)
+if (!listeners.codeCopy) {
+  listeners.codeCopy = true
+  document.addEventListener('click', handleCodeCopyClick)
+}
 </script>

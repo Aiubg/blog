@@ -3,6 +3,12 @@ import 'lite-youtube-embed/src/lite-yt-embed.css'
 ---
 
 <script>
+const runtime = window as typeof window & {
+  __retypeset?: { listeners?: Record<string, boolean> }
+}
+const retypeset = runtime.__retypeset ?? (runtime.__retypeset = {})
+const listeners = retypeset.listeners ?? (retypeset.listeners = {})
+
 async function setupYouTubeEmbeds() {
   const youtube = document.querySelectorAll('lite-youtube')
   if (youtube.length === 0) {
@@ -28,9 +34,22 @@ async function setupTwitterEmbeds() {
     tweet.setAttribute('data-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light')
   })
 
+  const scriptSrc = 'https://platform.twitter.com/widgets.js'
+  const existingScript = document.querySelector<HTMLScriptElement>(`script[src="${scriptSrc}"]`)
+  const twitter = (window as Window & { twttr?: { widgets?: { load?: () => void } } }).twttr
+
+  if (existingScript) {
+    twitter?.widgets?.load?.()
+    return
+  }
+
   const script = document.createElement('script')
-  script.src = 'https://platform.twitter.com/widgets.js'
+  script.src = scriptSrc
   script.async = true
+  script.onload = () => {
+    const loaded = (window as Window & { twttr?: { widgets?: { load?: () => void } } }).twttr
+    loaded?.widgets?.load?.()
+  }
   document.head.appendChild(script)
 }
 
@@ -109,7 +128,12 @@ function handleGalleryWheel(e: WheelEvent) {
   e.preventDefault()
 }
 
-document.addEventListener('astro:page-load', setupMediaEmbeds)
-document.addEventListener('theme-changed', updateMermaidTheme)
-document.addEventListener('wheel', handleGalleryWheel, { passive: false })
+setupMediaEmbeds()
+
+if (!listeners.mediaEmbed) {
+  listeners.mediaEmbed = true
+  document.addEventListener('astro:page-load', setupMediaEmbeds)
+  document.addEventListener('theme-changed', updateMermaidTheme)
+  document.addEventListener('wheel', handleGalleryWheel, { passive: false })
+}
 </script>

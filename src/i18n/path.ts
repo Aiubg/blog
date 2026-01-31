@@ -40,13 +40,18 @@ export function getPostPath(slug: string, lang: Language): string {
  * @returns Localized path with language prefix
  */
 export function getLocalizedPath(path: string, currentLang?: Language) {
-  const normalizedPath = path.replace(/^\/|\/$/g, '')
+  if (/^[a-z][a-z0-9+.-]*:/.test(path) || path.startsWith('#')) {
+    return path
+  }
+
+  const normalizedPath = path.replace(/^\/+|\/+$/g, '')
   const lang = currentLang ?? getLangFromPath(path)
+  const hasExtension = normalizedPath !== '' && /\.[^/]+$/.test(normalizedPath)
 
   const langPrefix = lang === defaultLocale ? '' : `/${lang}`
   const localizedPath = normalizedPath === ''
     ? `${langPrefix}/`
-    : `${langPrefix}/${normalizedPath}/`
+    : `${langPrefix}/${normalizedPath}${hasExtension ? '' : '/'}`
 
   return base ? `${base}${localizedPath}` : localizedPath
 }

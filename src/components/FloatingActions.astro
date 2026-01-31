@@ -66,26 +66,32 @@ const targetUrl = isSingleLangPost ? fallbackUrl : nextUrl
 </div>
 
 <script is:inline>
-  document.addEventListener('click', (e) => {
-    const target = e.target instanceof Element ? e.target : null
-    const link = target ? target.closest('#language-switcher') : null
-    if (!link) {
-      return
-    }
+  const retypeset = window.__retypeset || (window.__retypeset = {})
+  const listeners = retypeset.listeners || (retypeset.listeners = {})
 
-    e.preventDefault()
-    const url = link.getAttribute('href')
-    const nextLang = link.getAttribute('data-next-lang')
-    if (nextLang) {
-      try {
-        localStorage.setItem('lang', nextLang)
+  if (!listeners.languageSwitcher) {
+    listeners.languageSwitcher = true
+    document.addEventListener('click', (e) => {
+      const target = e.target instanceof Element ? e.target : null
+      const link = target ? target.closest('#language-switcher') : null
+      if (!link) {
+        return
       }
-      catch {}
-    }
-    if (url) {
-      location.replace(url)
-    }
-  })
+
+      e.preventDefault()
+      const url = link.getAttribute('href')
+      const nextLang = link.getAttribute('data-next-lang')
+      if (nextLang) {
+        try {
+          localStorage.setItem('lang', nextLang)
+        }
+        catch {}
+      }
+      if (url) {
+        location.replace(url)
+      }
+    })
+  }
 </script>
 
 <script
@@ -95,6 +101,9 @@ const targetUrl = isSingleLangPost ? fallbackUrl : nextUrl
     darkMode,
   }}
 >
+  const retypeset = window.__retypeset || (window.__retypeset = {})
+  const listeners = retypeset.listeners || (retypeset.listeners = {})
+
   function applyTheme(isDark) {
     document.documentElement.classList.toggle('dark', isDark)
 
@@ -136,13 +145,15 @@ const targetUrl = isSingleLangPost ? fallbackUrl : nextUrl
     })
   }
 
-  document.addEventListener('click', handleThemeToggleClick, { passive: true })
+  if (!listeners.themeToggle) {
+    listeners.themeToggle = true
+    document.addEventListener('click', handleThemeToggleClick, { passive: true })
 
-  window
-    .matchMedia('(prefers-color-scheme: dark)')
-    .addEventListener('change', (event) => {
-      const isDark = event.matches
-      applyTheme(isDark)
-    })
+    window
+      .matchMedia('(prefers-color-scheme: dark)')
+      .addEventListener('change', (event) => {
+        const isDark = event.matches
+        applyTheme(isDark)
+      })
+  }
 </script>
-

@@ -40,7 +40,9 @@ export function getLangFromPath(path: string): Language {
     ? path.slice(base.length)
     : path
 
-  return moreLocales.find(lang => pathWithoutBase.startsWith(`/${lang}/`)) ?? defaultLocale
+  return moreLocales.find(lang =>
+    pathWithoutBase === `/${lang}` || pathWithoutBase.startsWith(`/${lang}/`),
+  ) ?? defaultLocale
 }
 
 /**

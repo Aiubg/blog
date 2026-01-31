@@ -101,6 +101,9 @@ const pageImage = postSlug
  }}
 >
 (function () {
+  const retypeset = window.__retypeset || (window.__retypeset = {})
+  const listeners = retypeset.listeners || (retypeset.listeners = {})
+
   // Check if current theme is dark
   // Priority: localStorage theme > default theme > system preference
   function isDarkMode() {
@@ -140,10 +143,13 @@ const pageImage = postSlug
   }
 
   // Update theme before page transition to prevent flashing
-  document.addEventListener('astro:before-swap', ({ newDocument }) => {
-    initTheme(newDocument)
-    initMotionPref(newDocument)
-  })
+  if (!listeners.themeInit) {
+    listeners.themeInit = true
+    document.addEventListener('astro:before-swap', ({ newDocument }) => {
+      initTheme(newDocument)
+      initMotionPref(newDocument)
+    })
+  }
 
   // Initialize theme on first load
   initTheme()
@@ -160,6 +166,9 @@ const pageImage = postSlug
   }}
 >
 (function () {
+  const retypeset = window.__retypeset || (window.__retypeset = {})
+  const listeners = retypeset.listeners || (retypeset.listeners = {})
+
   function stripBase(path) {
     return base && path.startsWith(base) ? path.slice(base.length) : path
   }
@@ -196,8 +205,11 @@ const pageImage = postSlug
     }
     catch {}
   }
-  document.addEventListener('astro:page-load', enforceLanguagePreference)
-  window.addEventListener('pageshow', enforceLanguagePreference)
+  if (!listeners.langPref) {
+    listeners.langPref = true
+    document.addEventListener('astro:page-load', enforceLanguagePreference)
+    window.addEventListener('pageshow', enforceLanguagePreference)
+  }
   enforceLanguagePreference()
 })()
 </script>

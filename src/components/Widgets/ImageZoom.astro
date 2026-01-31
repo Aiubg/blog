@@ -1,4 +1,10 @@
 <script>
+const runtime = window as typeof window & {
+  __retypeset?: { listeners?: Record<string, boolean> }
+}
+const retypeset = runtime.__retypeset ?? (runtime.__retypeset = {})
+const listeners = retypeset.listeners ?? (retypeset.listeners = {})
+
 const ImageZoom = {
   overlay: document.querySelector('.zoom-overlay') as HTMLDivElement | null,
   zoomedImg: null as HTMLImageElement | null,
@@ -157,7 +163,12 @@ const ImageZoom = {
 
   // Initialize the ImageZoom
   init() {
-    this.createOverlay()
+    this.setupOverlay()
+
+    if (listeners.imageZoom) {
+      return
+    }
+    listeners.imageZoom = true
 
     document.addEventListener('astro:page-load', () => this.setupOverlay())
     document.addEventListener('click', event => this.handleClick(event), { passive: true })

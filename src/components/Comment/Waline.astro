@@ -47,10 +47,19 @@ import type { WalineInstance } from '@waline/client'
 
 let walineObserver: IntersectionObserver | null = null
 let walineInstance: WalineInstance | null = null
+const runtime = window as typeof window & {
+  __retypeset?: { listeners?: Record<string, boolean> }
+}
+const retypeset = runtime.__retypeset ?? (runtime.__retypeset = {})
+const listeners = retypeset.listeners ?? (retypeset.listeners = {})
 
 async function setupWaline() {
   const walineContainer = document.getElementById('waline')
   if (!walineContainer || !walineContainer.dataset.config) {
+    return
+  }
+
+  if (walineContainer.dataset.initialized === 'true') {
     return
   }
 
@@ -69,6 +78,7 @@ async function setupWaline() {
       reaction: [],
       ...restConfig,
     })
+    walineContainer.dataset.initialized = 'true'
   }
   catch (error) {
     console.error('[Waline] Failed to initialize:', error)
@@ -81,6 +91,12 @@ function lazySetupWaline() {
   if (!walineContainer || !walineContainer.dataset.config) {
     return
   }
+
+  if (walineContainer.dataset.initialized === 'true') {
+    return
+  }
+
+  walineObserver?.disconnect()
 
   const config = JSON.parse(walineContainer.dataset.config)
   const { walineCSS } = config
@@ -111,8 +127,13 @@ function cleanupWaline() {
   walineInstance = null
 }
 
-document.addEventListener('astro:page-load', lazySetupWaline)
-document.addEventListener('astro:before-swap', cleanupWaline)
+lazySetupWaline()
+
+if (!listeners.waline) {
+  listeners.waline = true
+  document.addEventListener('astro:page-load', lazySetupWaline)
+  document.addEventListener('astro:before-swap', cleanupWaline)
+}
 </script>
 
 <!-- Official CSS Variables >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> -->

@@ -48,6 +48,11 @@ const giscusConfig = {
 <!-- Giscus Script >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> -->
 <script>
 let giscusContainer: HTMLElement | null = null
+const runtime = window as typeof window & {
+  __retypeset?: { listeners?: Record<string, boolean> }
+}
+const retypeset = runtime.__retypeset ?? (runtime.__retypeset = {})
+const listeners = retypeset.listeners ?? (retypeset.listeners = {})
 
 function getThemeUrl(base: string) {
   const isDark = document.documentElement.classList.contains('dark')
@@ -86,6 +91,10 @@ function setupGiscus() {
     return
   }
 
+  if (giscusContainer.dataset.initialized === 'true') {
+    return
+  }
+
   giscusContainer.innerHTML = ''
 
   try {
@@ -104,6 +113,7 @@ function setupGiscus() {
     Object.assign(script.dataset, dataAttributes)
     script.src = 'https://giscus.app/client.js'
     giscusContainer.appendChild(script)
+    giscusContainer.dataset.initialized = 'true'
   }
   catch (error) {
     console.error('[Giscus] Failed to initialize:', error)
@@ -117,7 +127,12 @@ function cleanupGiscus() {
   }
 }
 
-document.addEventListener('astro:page-load', setupGiscus)
-document.addEventListener('astro:before-swap', cleanupGiscus)
-document.addEventListener('theme-changed', updateGiscusTheme)
+setupGiscus()
+
+if (!listeners.giscus) {
+  listeners.giscus = true
+  document.addEventListener('astro:page-load', setupGiscus)
+  document.addEventListener('astro:before-swap', cleanupGiscus)
+  document.addEventListener('theme-changed', updateGiscusTheme)
+}
 </script>

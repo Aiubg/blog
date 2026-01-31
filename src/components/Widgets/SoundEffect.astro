@@ -57,6 +57,15 @@ const ignoredKeys = new Set([
 const clickSelector = clickTargets.join(',')
 const typingSelector = typingTargets.join(',')
 
+const runtime = window as typeof window & {
+  __retypeset?: {
+    listeners?: Record<string, boolean>
+    soundManager?: SoundEffectManager
+  }
+}
+const retypeset = runtime.__retypeset ?? (runtime.__retypeset = {})
+const listeners = retypeset.listeners ?? (retypeset.listeners = {})
+
 function shouldPlayOnMobile(): boolean {
   const isMobile = window.matchMedia('(max-width: 1023px)').matches
   if (isMobile && !config.mobileEnabled) {
@@ -176,7 +185,7 @@ class SoundEffectManager {
   }
 }
 
-const soundManager = new SoundEffectManager()
+const soundManager = retypeset.soundManager ?? (retypeset.soundManager = new SoundEffectManager())
 
 function handleGlobalClick(event: MouseEvent) {
   if (!shouldPlayOnMobile())
@@ -209,7 +218,8 @@ function handleGlobalKeydown(event: KeyboardEvent) {
   soundManager.playSound(soundTypes.typing)
 }
 
-if (config.enabled) {
+if (config.enabled && !listeners.soundEffect) {
+  listeners.soundEffect = true
   document.addEventListener('click', handleGlobalClick)
   document.addEventListener('keydown', handleGlobalKeydown)
 }

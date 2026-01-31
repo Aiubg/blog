@@ -131,6 +131,12 @@ a:target-current {
 </style>
 
 <script>
+const runtime = window as typeof window & {
+  __retypeset?: { listeners?: Record<string, boolean> }
+}
+const retypeset = runtime.__retypeset ?? (runtime.__retypeset = {})
+const listeners = retypeset.listeners ?? (retypeset.listeners = {})
+
 const cssSupport = CSS.supports('selector(:target-current)')
 const is2xl = window.matchMedia('(min-width: 1536px)')
 
@@ -162,5 +168,8 @@ function setupAutoScroll() {
   ticking = true
 }
 
-document.addEventListener('scroll', setupAutoScroll, { passive: true })
+if (!listeners.tocScroll) {
+  listeners.tocScroll = true
+  document.addEventListener('scroll', setupAutoScroll, { passive: true })
+}
 </script>
