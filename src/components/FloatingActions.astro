@@ -66,32 +66,34 @@ const targetUrl = isSingleLangPost ? fallbackUrl : nextUrl
 </div>
 
 <script is:inline>
-  const retypeset = window.__retypeset || (window.__retypeset = {})
-  const listeners = retypeset.listeners || (retypeset.listeners = {})
+  ;(() => {
+    const retypeset = window.__retypeset || (window.__retypeset = {})
+    const listeners = retypeset.listeners || (retypeset.listeners = {})
 
-  if (!listeners.languageSwitcher) {
-    listeners.languageSwitcher = true
-    document.addEventListener('click', (e) => {
-      const target = e.target instanceof Element ? e.target : null
-      const link = target ? target.closest('#language-switcher') : null
-      if (!link) {
-        return
-      }
-
-      e.preventDefault()
-      const url = link.getAttribute('href')
-      const nextLang = link.getAttribute('data-next-lang')
-      if (nextLang) {
-        try {
-          localStorage.setItem('lang', nextLang)
+    if (!listeners.languageSwitcher) {
+      listeners.languageSwitcher = true
+      document.addEventListener('click', (e) => {
+        const target = e.target instanceof Element ? e.target : null
+        const link = target ? target.closest('#language-switcher') : null
+        if (!link) {
+          return
         }
-        catch {}
-      }
-      if (url) {
-        location.replace(url)
-      }
-    })
-  }
+
+        e.preventDefault()
+        const url = link.getAttribute('href')
+        const nextLang = link.getAttribute('data-next-lang')
+        if (nextLang) {
+          try {
+            localStorage.setItem('lang', nextLang)
+          }
+          catch {}
+        }
+        if (url) {
+          location.replace(url)
+        }
+      })
+    }
+  })()
 </script>
 
 <script
@@ -101,59 +103,61 @@ const targetUrl = isSingleLangPost ? fallbackUrl : nextUrl
     darkMode,
   }}
 >
-  const retypeset = window.__retypeset || (window.__retypeset = {})
-  const listeners = retypeset.listeners || (retypeset.listeners = {})
+  ;(() => {
+    const retypeset = window.__retypeset || (window.__retypeset = {})
+    const listeners = retypeset.listeners || (retypeset.listeners = {})
 
-  function applyTheme(isDark) {
-    document.documentElement.classList.toggle('dark', isDark)
+    function applyTheme(isDark) {
+      document.documentElement.classList.toggle('dark', isDark)
 
-    const metaThemeColor = document.head.querySelector('meta[name="theme-color"]')
-    if (metaThemeColor && lightMode && darkMode) {
-      metaThemeColor.setAttribute('content', isDark ? darkMode : lightMode)
+      const metaThemeColor = document.head.querySelector('meta[name="theme-color"]')
+      if (metaThemeColor && lightMode && darkMode) {
+        metaThemeColor.setAttribute('content', isDark ? darkMode : lightMode)
+      }
+
+      localStorage.setItem('theme', isDark ? 'dark' : 'light')
+      document.dispatchEvent(new Event('theme-changed'))
     }
 
-    localStorage.setItem('theme', isDark ? 'dark' : 'light')
-    document.dispatchEvent(new Event('theme-changed'))
-  }
-
-  function toggleTheme() {
-    const isDark = !document.documentElement.classList.contains('dark')
-    applyTheme(isDark)
-  }
-
-  function handleThemeToggleClick(e) {
-    const target = e.target instanceof Element ? e.target : null
-    const button = target?.closest('#theme-toggle-button')
-
-    if (!button) {
-      return
+    function toggleTheme() {
+      const isDark = !document.documentElement.classList.contains('dark')
+      applyTheme(isDark)
     }
 
-    if (document.documentElement.classList.contains('reduce-motion')) {
-      toggleTheme()
-      return
-    }
+    function handleThemeToggleClick(e) {
+      const target = e.target instanceof Element ? e.target : null
+      const button = target?.closest('#theme-toggle-button')
 
-    document.documentElement.style.setProperty('view-transition-name', 'animation-theme-toggle')
-    document.documentElement.setAttribute('data-theme-changing', '')
+      if (!button) {
+        return
+      }
 
-    const transition = document.startViewTransition(toggleTheme)
+      if (document.documentElement.classList.contains('reduce-motion')) {
+        toggleTheme()
+        return
+      }
 
-    transition.finished.then(() => {
-      document.documentElement.style.removeProperty('view-transition-name')
-      document.documentElement.removeAttribute('data-theme-changing')
-    })
-  }
+      document.documentElement.style.setProperty('view-transition-name', 'animation-theme-toggle')
+      document.documentElement.setAttribute('data-theme-changing', '')
 
-  if (!listeners.themeToggle) {
-    listeners.themeToggle = true
-    document.addEventListener('click', handleThemeToggleClick, { passive: true })
+      const transition = document.startViewTransition(toggleTheme)
 
-    window
-      .matchMedia('(prefers-color-scheme: dark)')
-      .addEventListener('change', (event) => {
-        const isDark = event.matches
-        applyTheme(isDark)
+      transition.finished.then(() => {
+        document.documentElement.style.removeProperty('view-transition-name')
+        document.documentElement.removeAttribute('data-theme-changing')
       })
-  }
+    }
+
+    if (!listeners.themeToggle) {
+      listeners.themeToggle = true
+      document.addEventListener('click', handleThemeToggleClick, { passive: true })
+
+      window
+        .matchMedia('(prefers-color-scheme: dark)')
+        .addEventListener('change', (event) => {
+          const isDark = event.matches
+          applyTheme(isDark)
+        })
+    }
+  })()
 </script>

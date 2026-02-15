@@ -108,7 +108,6 @@ const { Content, headings, remarkPluginFrontmatter } = await render(post)
     <div
       id="post-date"
       class="mb-17.2 block c-primary font-time"
-      transition:name={`time-${slug}${currentLang ? `-${currentLang}` : ''}`}
       data-disable-theme-transition
     >
       <PostDate
@@ -120,7 +119,7 @@ const { Content, headings, remarkPluginFrontmatter } = await render(post)
     <!-- TOC -->
     {post.data.toc && <TOC headings={headings} />}
     <!-- Content -->
-    <div id="post-content">
+    <div id="post-content" transition:name="post-content">
       <Content />
       <!-- Copyright -->
       <div id="post-copyright" />
