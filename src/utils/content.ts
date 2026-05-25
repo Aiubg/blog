@@ -42,7 +42,7 @@ export function getPostLang(post: CollectionEntry<'posts'>): '' | Language {
   if (first === '_all') {
     return ''
   }
-  if (Object.prototype.hasOwnProperty.call(langMap, first)) {
+  if (Object.hasOwn(langMap, first)) {
     return first as Language
   }
   return ''
