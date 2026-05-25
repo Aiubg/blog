@@ -98,6 +98,7 @@ const pageImage = postSlug
     lightMode,
     darkMode,
     reduceMotion,
+    isDev: import.meta.env.DEV,
  }}
 >
 (function () {
@@ -142,6 +143,34 @@ const pageImage = postSlug
     doc.documentElement.classList.toggle('reduce-motion', shouldReduceMotion)
   }
 
+  function persistViteDevStyles(doc = document) {
+    if (!isDev) {
+      return
+    }
+
+    doc.head.querySelectorAll('style[data-vite-dev-id]').forEach((style) => {
+      const id = style.getAttribute('data-vite-dev-id')
+      if (!id) {
+        return
+      }
+
+      // Astro's dev router compares style text during swaps. UnoCSS rewrites
+      // --at-apply rules after load, so persist Vite styles by id instead.
+      style.setAttribute('data-astro-transition-persist', `vite-dev-style:${id}`)
+    })
+  }
+
+  if (isDev && !listeners.viteDevStylePersist) {
+    listeners.viteDevStylePersist = true
+    document.addEventListener('astro:before-swap', ({ newDocument }) => {
+      persistViteDevStyles()
+      persistViteDevStyles(newDocument)
+    })
+    document.addEventListener('astro:page-load', () => {
+      persistViteDevStyles()
+    })
+  }
+
   // Update theme before page transition to prevent flashing
   if (!listeners.themeInit) {
     listeners.themeInit = true
@@ -154,6 +183,7 @@ const pageImage = postSlug
   // Initialize theme on first load
   initTheme()
   initMotionPref()
+  persistViteDevStyles()
 })()
 </script>
 
