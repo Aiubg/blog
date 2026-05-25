@@ -3,17 +3,18 @@ import { visit } from 'unist-util-visit'
 const embedHandlers = {
   // GitHub Repository Card
   github: (node) => {
-    const repo = node.attributes?.repo ?? ''
-    if (!repo) {
+    const rawRepo = (node.attributes?.repo ?? '').trim()
+    if (!rawRepo) {
       console.warn(`Missing GitHub repository`)
       return false
     }
 
-    const [owner, name] = repo.split('/')
+    const [owner, name] = rawRepo.split('/').map(part => part.trim())
     if (!owner || !name) {
-      console.warn(`Invalid GitHub repository format: "${repo}"`)
+      console.warn(`Invalid GitHub repository format: "${rawRepo}"`)
       return false
     }
+    const repo = `${owner}/${name}`
 
     return `
     <a href="https://github.com/${repo}" class="no-heti gc-container" target="_blank" rel="noopener noreferrer" data-repo="${repo}">

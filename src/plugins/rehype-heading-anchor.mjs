@@ -3,7 +3,7 @@ import { SKIP, visit } from 'unist-util-visit'
 export function rehypeHeadingAnchor() {
   return (tree) => {
     visit(tree, 'element', (node) => {
-      if (['h1', 'h2', 'h3', 'h4'].includes(node.tagName) && node.properties?.id) {
+      if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(node.tagName) && node.properties?.id) {
         // Extract heading text
         let headingText = ''
         visit(node, 'text', (textNode) => {

@@ -142,7 +142,9 @@ const targetUrl = isSingleLangPost ? fallbackUrl : nextUrl
 
       const transition = document.startViewTransition(toggleTheme)
 
-      transition.finished.then(() => {
+      // Use finally so the orphaned style/attribute are cleared even if the
+      // transition is skipped (e.g. user navigates away mid-animation).
+      transition.finished.finally(() => {
         document.documentElement.style.removeProperty('view-transition-name')
         document.documentElement.removeAttribute('data-theme-changing')
       })
@@ -155,8 +157,13 @@ const targetUrl = isSingleLangPost ? fallbackUrl : nextUrl
       window
         .matchMedia('(prefers-color-scheme: dark)')
         .addEventListener('change', (event) => {
-          const isDark = event.matches
-          applyTheme(isDark)
+          // Only follow the system preference when the user has not made an
+          // explicit choice via the theme toggle. Otherwise OS theme flips
+          // would silently overwrite the user's stored selection.
+          if (localStorage.getItem('theme')) {
+            return
+          }
+          applyTheme(event.matches)
         })
     }
   })()

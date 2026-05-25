@@ -40,7 +40,9 @@ body::selection {
 h1:hover .heading-anchor-link svg,
 h2:hover .heading-anchor-link svg,
 h3:hover .heading-anchor-link svg,
-h4:hover .heading-anchor-link svg {
+h4:hover .heading-anchor-link svg,
+h5:hover .heading-anchor-link svg,
+h6:hover .heading-anchor-link svg {
   --at-apply: 'op-40';
 }
 .heading-anchor-link svg {
@@ -49,7 +51,9 @@ h4:hover .heading-anchor-link svg {
 h1:hover .heading-anchor-link svg:hover,
 h2:hover .heading-anchor-link svg:hover,
 h3:hover .heading-anchor-link svg:hover,
-h4:hover .heading-anchor-link svg:hover {
+h4:hover .heading-anchor-link svg:hover,
+h5:hover .heading-anchor-link svg:hover,
+h6:hover .heading-anchor-link svg:hover {
   --at-apply: 'op-80';
 }
 

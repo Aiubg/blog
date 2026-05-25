@@ -333,6 +333,26 @@ const ImageZoom = {
     }
   },
 
+  // Synchronously dismiss the viewer when the page is about to swap so that
+  // body.style.overflow and the cloned image don't leak into the next page.
+  forceDismiss() {
+    if (this.zoomedImg?.parentNode) {
+      this.zoomedImg.parentNode.removeChild(this.zoomedImg)
+    }
+    if (this.overlay) {
+      this.overlay.classList.remove('is-open')
+      this.overlay.setAttribute('aria-hidden', 'true')
+    }
+    document.body.style.overflow = ''
+    this.zoomedImg = null
+    this.originalImg = null
+    this.rect = null
+    this.pointers.clear()
+    this.pinchStart = null
+    this.pointerMoved = false
+    this.pointerDownOnOverlay = false
+  },
+
   init() {
     this.setupOverlay()
 
@@ -342,6 +362,7 @@ const ImageZoom = {
     listeners.imageZoom = true
 
     document.addEventListener('astro:page-load', () => this.setupOverlay())
+    document.addEventListener('astro:before-swap', () => this.forceDismiss())
     document.addEventListener('click', event => this.handleClick(event), { passive: true })
     document.addEventListener('keydown', event => this.handleKey(event))
     window.addEventListener('resize', () => this.handleResize(), { passive: true })

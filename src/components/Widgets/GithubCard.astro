@@ -74,7 +74,7 @@ function updateCardUI(card: HTMLElement, data: GithubRepoData | null) {
 
   const avatar = card.querySelector<HTMLElement>('.gc-owner-avatar')
   if (avatar && data.owner?.avatar_url) {
-    avatar.style.backgroundImage = `url(${data.owner.avatar_url})`
+    avatar.style.backgroundImage = `url("${CSS.escape(data.owner.avatar_url)}")`
   }
 
   setText('.gc-repo-description', data.description ?? 'No description')
