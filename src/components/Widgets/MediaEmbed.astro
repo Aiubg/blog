@@ -3,114 +3,77 @@ import 'lite-youtube-embed/src/lite-yt-embed.css'
 ---
 
 <script>
-const runtime = window as typeof window & {
-  __retypeset?: { listeners?: Record<string, boolean> }
-}
-const retypeset = runtime.__retypeset ?? (runtime.__retypeset = {})
-const listeners = retypeset.listeners ?? (retypeset.listeners = {})
+let mermaidObserver: IntersectionObserver | null = null
+let mermaidRendering = Promise.resolve()
+let twitterLoading: Promise<void> | undefined
 
-async function setupYouTubeEmbeds() {
-  const youtube = document.querySelectorAll('lite-youtube')
-  if (youtube.length === 0) {
-    return
-  }
+function renderMermaids(nodes: HTMLElement[], reset = false) {
+  // Mermaid shares a global configuration. Serialize rendering and theme changes.
+  mermaidRendering = mermaidRendering.then(async () => {
+    const { default: mermaid } = await import('mermaid')
+    const connectedNodes = nodes.filter(node => node.isConnected)
+    if (!connectedNodes.length) {
+      return
+    }
 
-  try {
-    // @ts-expect-error - No type definitions available for lite-youtube-embed
-    await import('lite-youtube-embed')
-  }
-  catch (error) {
-    console.error('Failed to load YouTube embed:', error)
-  }
+    for (const node of connectedNodes) {
+      node.dataset.mermaidCode ??= node.textContent!.trim()
+      if (reset) {
+        node.textContent = node.dataset.mermaidCode
+        node.removeAttribute('data-processed')
+      }
+    }
+
+    mermaid.initialize({
+      startOnLoad: false,
+      layout: 'dagre',
+      look: 'classic',
+      theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
+    })
+    await mermaid.run({ nodes: connectedNodes })
+  }).catch(error => console.error('[Mermaid]', error))
 }
 
 async function setupTwitterEmbeds() {
-  const tweets = document.querySelectorAll('.twitter-tweet')
-  if (tweets.length === 0) {
+  const tweets = document.querySelectorAll<HTMLElement>('.twitter-tweet')
+  if (!tweets.length) {
     return
   }
+  const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+  tweets.forEach(tweet => tweet.dataset.theme = theme)
 
-  tweets.forEach((tweet) => {
-    tweet.setAttribute('data-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light')
+  twitterLoading ??= new Promise<void>((resolve, reject) => {
+    const script = document.createElement('script')
+    script.src = 'https://platform.twitter.com/widgets.js'
+    script.async = true
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error('Failed to load Twitter widgets'))
+    document.head.appendChild(script)
   })
-
-  const scriptSrc = 'https://platform.twitter.com/widgets.js'
-  const existingScript = document.querySelector<HTMLScriptElement>(`script[src="${scriptSrc}"]`)
-  const twitter = (window as Window & { twttr?: { widgets?: { load?: () => void } } }).twttr
-
-  if (existingScript) {
-    twitter?.widgets?.load?.()
-    return
-  }
-
-  const script = document.createElement('script')
-  script.src = scriptSrc
-  script.async = true
-  script.onload = () => {
-    const loaded = (window as Window & { twttr?: { widgets?: { load?: () => void } } }).twttr
-    loaded?.widgets?.load?.()
-  }
-  document.head.appendChild(script)
+  await twitterLoading
+  window.twttr.widgets.load()
 }
 
-async function setupMermaidEmbeds() {
-  const mermaids = document.querySelectorAll('pre.mermaid')
-  if (mermaids.length === 0) {
+function setupMediaEmbeds() {
+  if (document.querySelector('lite-youtube') && !customElements.get('lite-youtube')) {
+    // @ts-expect-error - lite-youtube-embed does not ship type definitions.
+    import('lite-youtube-embed').catch(error => console.error('[YouTube]', error))
+  }
+  setupTwitterEmbeds().catch(error => console.error('[Twitter]', error))
+
+  mermaidObserver?.disconnect()
+  const nodes = document.querySelectorAll<HTMLElement>('pre.mermaid')
+  if (!nodes.length) {
     return
   }
-
-  mermaids.forEach((element) => {
-    const mermaid = element as HTMLElement
-    if (!mermaid.dataset.mermaidCode) {
-      mermaid.dataset.mermaidCode = mermaid.textContent?.trim() ?? ''
+  mermaidObserver = new IntersectionObserver((entries) => {
+    const visible = entries.filter(entry => entry.isIntersecting)
+    visible.forEach(entry => mermaidObserver!.unobserve(entry.target))
+    if (visible.length) {
+      renderMermaids(visible.map(entry => entry.target as HTMLElement))
     }
-  })
-
-  try {
-    const { default: mermaid } = await import('mermaid')
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
-    })
-    mermaid.run()
-  }
-  catch (error) {
-    console.error('Failed to load Mermaid:', error)
-  }
-}
-
-async function setupMediaEmbeds() {
-  await Promise.allSettled([
-    setupYouTubeEmbeds(),
-    setupTwitterEmbeds(),
-    setupMermaidEmbeds(),
-  ])
-}
-
-function updateMermaidTheme() {
-  const mermaids = document.querySelectorAll('pre.mermaid[data-mermaid-code]')
-  if (mermaids.length === 0) {
-    return
-  }
-
-  const isDark = document.documentElement.classList.contains('dark')
-
-  import('mermaid').then(({ default: mermaid }) => {
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: isDark ? 'dark' : 'default',
-    })
-
-    mermaids.forEach((element) => {
-      const mermaid = element as HTMLElement
-      mermaid.innerHTML = mermaid.dataset.mermaidCode ?? ''
-      mermaid.removeAttribute('data-processed')
-    })
-
-    mermaid.run()
-  }).catch((error) => {
-    console.error('Failed to update Mermaid theme:', error)
-  })
+  }, { rootMargin: '300px' })
+  nodes.forEach(node => mermaidObserver!.observe(node))
 }
 
 function handleGalleryWheel(e: WheelEvent) {
@@ -128,12 +91,13 @@ function handleGalleryWheel(e: WheelEvent) {
   e.preventDefault()
 }
 
-setupMediaEmbeds()
-
-if (!listeners.mediaEmbed) {
-  listeners.mediaEmbed = true
-  document.addEventListener('astro:page-load', setupMediaEmbeds)
-  document.addEventListener('theme-changed', updateMermaidTheme)
-  document.addEventListener('wheel', handleGalleryWheel, { passive: false })
-}
+document.addEventListener('astro:page-load', setupMediaEmbeds)
+document.addEventListener('astro:before-swap', () => mermaidObserver?.disconnect())
+document.addEventListener('theme-changed', () => {
+  const nodes = [...document.querySelectorAll<HTMLElement>('pre.mermaid[data-processed]')]
+  if (nodes.length) {
+    renderMermaids(nodes, true)
+  }
+})
+document.addEventListener('wheel', handleGalleryWheel, { passive: false })
 </script>

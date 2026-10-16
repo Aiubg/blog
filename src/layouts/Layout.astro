@@ -25,9 +25,10 @@ interface Props {
   postDescription?: string
   postSlug?: string
   supportedLangs?: Language[]
+  hasMath?: boolean
 }
 
-const { postTitle, postDescription, postSlug, supportedLangs = [] } = Astro.props
+const { postTitle, postDescription, postSlug, supportedLangs = [], hasMath = false } = Astro.props
 const { isPost } = getPageInfo(Astro.url.pathname)
 const fontStyle = themeConfig.global.fontStyle === 'serif' ? 'font-serif' : 'font-sans'
 const marginBottomClass = isPost && themeConfig.comment.enabled
@@ -42,7 +43,7 @@ const marginBottomClass = isPost && themeConfig.comment.enabled
     isPost ? 'scroll-smooth' : '',
   ]}
 >
-  <Head {postTitle} {postDescription} {postSlug} />
+  <Head {postTitle} {postDescription} {postSlug} {hasMath} />
   <body>
     <div
       class="mx-auto max-w-205.848 min-h-vh w-full min-h-dvh"

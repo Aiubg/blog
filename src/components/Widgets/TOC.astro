@@ -131,20 +131,19 @@ a:target-current {
 </style>
 
 <script>
-const runtime = window as typeof window & {
-  __retypeset?: { listeners?: Record<string, boolean> }
-}
-const retypeset = runtime.__retypeset ?? (runtime.__retypeset = {})
-const listeners = retypeset.listeners ?? (retypeset.listeners = {})
-
 const cssSupport = CSS.supports('selector(:target-current)')
 const is2xl = window.matchMedia('(min-width: 1536px)')
 
 let ticking = false
 let lastLink: Element | null = null
+let tocList: HTMLElement | null = null
+
+document.addEventListener('astro:page-load', () => {
+  tocList = document.getElementById('toc-links-list')
+  lastLink = null
+})
 
 function updateScroll() {
-  const tocList = document.getElementById('toc-links-list')
   if (!tocList) {
     ticking = false
     return
@@ -160,7 +159,7 @@ function updateScroll() {
 }
 
 function setupAutoScroll() {
-  if (!cssSupport || !is2xl.matches || ticking) {
+  if (!tocList || !cssSupport || !is2xl.matches || ticking) {
     return
   }
 
@@ -168,8 +167,5 @@ function setupAutoScroll() {
   ticking = true
 }
 
-if (!listeners.tocScroll) {
-  listeners.tocScroll = true
-  document.addEventListener('scroll', setupAutoScroll, { passive: true })
-}
+document.addEventListener('scroll', setupAutoScroll, { passive: true })
 </script>

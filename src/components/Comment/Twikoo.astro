@@ -1,28 +1,22 @@
 ---
+import twikooJS from 'twikoo/dist/twikoo.all.nocss.js?url' // Keep styles separate for page transitions and bundle every locale
 import twikooCSS from 'twikoo/dist/twikoo.css?url'
-import twikooJS from 'twikoo/dist/twikoo.nocss.js?url' // Using twikoo.min.js causes CSS loading failure after page switching
-import { allLocales, base, defaultLocale, themeConfig } from '@/config'
+import { defaultLocale, themeConfig } from '@/config'
 import { twikooLocaleMap } from '@/i18n/config'
+import { getLangFromPath } from '@/i18n/lang'
+import { getNextLangPath } from '@/i18n/path'
 
 const { envId = '' } = themeConfig.comment.twikoo ?? {}
 
-// Remove locale prefix from path
-const currentPath = Astro.url.pathname
-const localePattern = new RegExp(`\\/(${allLocales.join('|')})\\/`)
-const twikooPath = currentPath.replace(localePattern, '/')
-
-// Determine language
-const pathWithoutBase = base && currentPath.startsWith(base)
-  ? currentPath.slice(base.length)
-  : currentPath
-const matchedLang = Object.keys(twikooLocaleMap).find(code => pathWithoutBase.startsWith(`/${code}/`))
-const lang = (matchedLang ?? defaultLocale) as keyof typeof twikooLocaleMap
+const lang = getLangFromPath(Astro.url.pathname)
+const twikooPath = getNextLangPath(Astro.url.pathname, lang, defaultLocale)
 
 const twikooConfig = {
   envId,
   path: twikooPath,
   lang: twikooLocaleMap[lang],
   twikooCSS,
+  twikooJS,
 }
 ---
 
@@ -35,101 +29,59 @@ const twikooConfig = {
   <div id="twikoo" />
 </div>
 
-<!-- Twikoo Script >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> -->
-<script
-  is:inline
-  src={twikooJS}
-></script>
-
 <script>
-declare const twikoo: any
-
-let twikooObserver: IntersectionObserver | null = null
-let twikooWrapper: HTMLElement | null = null
-const runtime = window as typeof window & {
-  __retypeset?: { listeners?: Record<string, boolean> }
+interface TwikooConfig {
+  envId: string
+  path: string
+  lang: string
+  twikooCSS: string
+  twikooJS: string
 }
-const retypeset = runtime.__retypeset ?? (runtime.__retypeset = {})
-const listeners = retypeset.listeners ?? (retypeset.listeners = {})
+declare const twikoo: {
+  init: (options: { envId: string, el: HTMLElement, path: string, lang: string }) => Promise<void>
+}
+
+let observer: IntersectionObserver | undefined
+let libraryLoading: Promise<void> | undefined
+
+async function initialize(container: HTMLElement) {
+  const config: TwikooConfig = JSON.parse(container.dataset.config!)
+  if (!document.getElementById('twikoo-css')) {
+    const stylesheet = document.createElement('link')
+    stylesheet.id = 'twikoo-css'
+    stylesheet.rel = 'stylesheet'
+    stylesheet.href = config.twikooCSS
+    document.head.appendChild(stylesheet)
+  }
+  libraryLoading ??= new Promise<void>((resolve, reject) => {
+    const script = document.createElement('script')
+    script.src = config.twikooJS
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error('Failed to load Twikoo'))
+    document.head.appendChild(script)
+  })
+  await libraryLoading
+  if (!container.isConnected) {
+    return
+  }
+  await twikoo.init({ envId: config.envId, el: container.querySelector<HTMLElement>('#twikoo')!, path: config.path, lang: config.lang })
+}
 
 function setupTwikoo() {
-  const twikooWrapper = document.getElementById('twikoo-wrapper')
-  if (!twikooWrapper || !twikooWrapper.dataset.config) {
+  observer?.disconnect()
+  const container = document.getElementById('twikoo-wrapper')
+  if (!container) {
     return
   }
-
-  if (twikooWrapper.dataset.initialized === 'true') {
-    return
-  }
-
-  try {
-    const config = JSON.parse(twikooWrapper.dataset.config)
-    const { envId, path, lang } = config
-
-    twikoo.init({
-      envId,
-      el: '#twikoo',
-      // region: 'ap-shanghai', // Specify for Tencent Cloud, omit for Vercel
-      path,
-      lang,
-    })
-    twikooWrapper.dataset.initialized = 'true'
-  }
-  catch (error) {
-    console.error('[Twikoo] Failed to initialize:', error)
-  }
-}
-
-// Lazy load Twikoo when the wrapper enters viewport
-function lazySetupTwikoo() {
-  twikooWrapper = document.getElementById('twikoo-wrapper')
-  if (!twikooWrapper || !twikooWrapper.dataset.config) {
-    return
-  }
-
-  if (twikooWrapper.dataset.initialized === 'true') {
-    return
-  }
-
-  twikooObserver?.disconnect()
-
-  const config = JSON.parse(twikooWrapper.dataset.config)
-  const { twikooCSS } = config
-
-  if (!document.getElementById('twikoo-css')) {
-    const link = document.createElement('link')
-    link.id = 'twikoo-css'
-    link.rel = 'stylesheet'
-    link.href = twikooCSS
-    document.head.appendChild(link)
-  }
-
-  twikooObserver = new IntersectionObserver((entries) => {
+  observer = new IntersectionObserver((entries) => {
     if (entries.some(entry => entry.isIntersecting)) {
-      setupTwikoo()
-      twikooObserver?.disconnect()
-      twikooObserver = null
+      observer!.disconnect()
+      initialize(container).catch(error => console.error('[Twikoo]', error))
     }
   }, { rootMargin: '500px' })
-
-  twikooObserver.observe(twikooWrapper)
+  observer.observe(container)
 }
 
-function cleanupTwikoo() {
-  twikooObserver?.disconnect()
-  twikooObserver = null
-
-  if (twikooWrapper) {
-    twikooWrapper.innerHTML = ''
-    twikooWrapper = null
-  }
-}
-
-lazySetupTwikoo()
-
-if (!listeners.twikoo) {
-  listeners.twikoo = true
-  document.addEventListener('astro:page-load', lazySetupTwikoo)
-  document.addEventListener('astro:before-swap', cleanupTwikoo)
-}
+document.addEventListener('astro:page-load', setupTwikoo)
+document.addEventListener('astro:before-swap', () => observer?.disconnect())
 </script>

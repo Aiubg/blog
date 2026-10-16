@@ -17,12 +17,6 @@ import GoBackIcon from '@/assets/icons/go-back.svg';
 
 <!-- Go Back Script >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> -->
 <script>
-const runtime = window as typeof window & {
-  __retypeset?: { listeners?: Record<string, boolean> }
-}
-const retypeset = runtime.__retypeset ?? (runtime.__retypeset = {})
-const listeners = retypeset.listeners ?? (retypeset.listeners = {})
-
 function handleBackButtonClick(e: MouseEvent) {
   if (!(e.target instanceof Element)) {
     return
@@ -45,8 +39,5 @@ function handleBackButtonClick(e: MouseEvent) {
   }
 }
 
-if (!listeners.backButton) {
-  listeners.backButton = true
-  document.addEventListener('click', handleBackButtonClick)
-}
+document.addEventListener('click', handleBackButtonClick)
 </script>

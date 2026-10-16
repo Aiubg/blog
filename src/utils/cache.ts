@@ -4,18 +4,24 @@
  * @param fn - The async function to memoize
  * @returns Memoized function that caches results
  */
-export function memoize<Args extends any[], T>(
+export function memoize<Args extends unknown[], T>(
   fn: (...args: Args) => Promise<T>,
 ): (...args: Args) => Promise<T> {
+  // Content changes during development must be visible without a restart.
+  if (import.meta.env.DEV) {
+    return fn
+  }
+
   const cache = new Map<string, Promise<T>>()
 
-  return async (...args: Args): Promise<T> => {
+  return (...args: Args): Promise<T> => {
     // Generate cache key from function arguments
     const key = JSON.stringify(args)
 
     // Return cached promise if it exists
-    if (cache.has(key)) {
-      return cache.get(key)!
+    const cached = cache.get(key)
+    if (cached) {
+      return cached
     }
 
     // Execute the original function and cache the promise

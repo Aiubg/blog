@@ -1,6 +1,7 @@
 ---
-import { base, defaultLocale, themeConfig } from '@/config'
+import { base, themeConfig } from '@/config'
 import { giscusLocaleMap } from '@/i18n/config'
+import { getLangFromPath } from '@/i18n/lang'
 
 const {
   repo = '',
@@ -15,14 +16,7 @@ const {
 } = themeConfig.comment.giscus ?? {}
 
 
-const currentPath = Astro.url.pathname
-
-// Determine language
-const pathWithoutBase = base && currentPath.startsWith(base)
-  ? currentPath.slice(base.length)
-  : currentPath
-const matchedLang = Object.keys(giscusLocaleMap).find(code => pathWithoutBase.startsWith(`/${code}/`))
-const lang = (matchedLang ?? defaultLocale) as keyof typeof giscusLocaleMap
+const lang = getLangFromPath(Astro.url.pathname)
 
 const giscusConfig = {
   base,
@@ -47,92 +41,47 @@ const giscusConfig = {
 
 <!-- Giscus Script >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> -->
 <script>
-let giscusContainer: HTMLElement | null = null
-const runtime = window as typeof window & {
-  __retypeset?: { listeners?: Record<string, boolean> }
-}
-const retypeset = runtime.__retypeset ?? (runtime.__retypeset = {})
-const listeners = retypeset.listeners ?? (retypeset.listeners = {})
+let observer: IntersectionObserver | undefined
 
 function getThemeUrl(base: string) {
-  const isDark = document.documentElement.classList.contains('dark')
-  const origin = window.location.origin
-
-  return isDark
-    ? `${origin}${base}/giscus/theme-dark.css`
-    : `${origin}${base}/giscus/theme-light.css`
-}
-
-function updateGiscusTheme() {
-  if (!giscusContainer || !giscusContainer.dataset.config) {
-    return
-  }
-
-  const giscusWindow = giscusContainer.querySelector<HTMLIFrameElement>('iframe.giscus-frame')?.contentWindow
-  if (!giscusWindow) {
-    return
-  }
-
-  try {
-    const { base } = JSON.parse(giscusContainer.dataset.config)
-    giscusWindow.postMessage(
-      { giscus: { setConfig: { theme: getThemeUrl(base) } } },
-      'https://giscus.app',
-    )
-  }
-  catch (error) {
-    console.error('[Giscus] Failed to update theme:', error)
-  }
+  const theme = document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+  return `${location.origin}${base}/giscus/theme-${theme}.css`
 }
 
 function setupGiscus() {
-  giscusContainer = document.getElementById('giscus')
-  if (!giscusContainer || !giscusContainer.dataset.config) {
+  observer?.disconnect()
+  const container = document.getElementById('giscus')
+  if (!container) {
     return
   }
-
-  if (giscusContainer.dataset.initialized === 'true') {
-    return
-  }
-
-  giscusContainer.innerHTML = ''
-
-  try {
-    const config = JSON.parse(giscusContainer.dataset.config)
-    const { base, category, ...restConfig } = config
-
-    const dataAttributes: Record<string, string> = {
-      ...restConfig,
-      ...(category && { category }),
-      theme: getThemeUrl(base),
+  observer = new IntersectionObserver((entries) => {
+    if (!entries.some(entry => entry.isIntersecting)) {
+      return
     }
-
+    observer!.disconnect()
+    const { base, category, ...options } = JSON.parse(container.dataset.config!)
     const script = document.createElement('script')
+    script.src = 'https://giscus.app/client.js'
     script.crossOrigin = 'anonymous'
     script.async = true
-    Object.assign(script.dataset, dataAttributes)
-    script.src = 'https://giscus.app/client.js'
-    giscusContainer.appendChild(script)
-    giscusContainer.dataset.initialized = 'true'
-  }
-  catch (error) {
-    console.error('[Giscus] Failed to initialize:', error)
-  }
+    Object.assign(script.dataset, options, {
+      ...(category && { category }),
+      theme: getThemeUrl(base),
+    })
+    script.onerror = () => console.error('[Giscus] Failed to load comments')
+    container.appendChild(script)
+  }, { rootMargin: '500px' })
+  observer.observe(container)
 }
 
-function cleanupGiscus() {
-  if (giscusContainer) {
-    giscusContainer.innerHTML = ''
-    giscusContainer = null
+document.addEventListener('astro:page-load', setupGiscus)
+document.addEventListener('astro:before-swap', () => observer?.disconnect())
+document.addEventListener('theme-changed', () => {
+  const container = document.getElementById('giscus')
+  const frame = container?.querySelector<HTMLIFrameElement>('iframe.giscus-frame')
+  if (frame?.contentWindow) {
+    const { base } = JSON.parse(container!.dataset.config!)
+    frame.contentWindow.postMessage({ giscus: { setConfig: { theme: getThemeUrl(base) } } }, 'https://giscus.app')
   }
-}
-
-setupGiscus()
-
-if (!listeners.giscus) {
-  listeners.giscus = true
-  document.addEventListener('astro:page-load', setupGiscus)
-  document.addEventListener('astro:before-swap', cleanupGiscus)
-  document.addEventListener('theme-changed', updateGiscusTheme)
-}
+})
 </script>

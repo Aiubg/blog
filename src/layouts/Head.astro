@@ -9,24 +9,25 @@ interface Props {
   postTitle?: string
   postDescription?: string
   postSlug?: string
+  hasMath: boolean
 }
 
 // Props and Language
-const { postTitle, postDescription, postSlug } = Astro.props
+const { postTitle, postDescription, postSlug, hasMath } = Astro.props
 const { currentLang } = getPageInfo(Astro.url.pathname)
 const currentUI = ui[currentLang as keyof typeof ui] ?? {}
 const lang = currentLang === defaultLocale ? '' : `${currentLang}/`
 
 // Site Configuration
 const { title, subtitle, description, i18nTitle, author, favicon } = themeConfig.site
-const { mode: defaultMode, light: { background: lightMode }, dark: { background: darkMode } } = themeConfig.color
+const { mode: defaultMode, light: { background: lightMode }, dark: { background: darkBackground } } = themeConfig.color
 const { katex: katexEnabled, reduceMotion } = themeConfig.global
 const { verification = {}, twitterID = '', googleAnalyticsID = '', umamiAnalyticsID = '', apiflashKey = '' } = themeConfig.seo ?? {}
 const { google = '', bing = '', yandex = '', baidu = '' } = verification
 const { customGoogleAnalyticsJS = '', customUmamiAnalyticsJS = '' } = themeConfig.preload ?? {}
 
 // Site Metadata
-const metaTheme = defaultMode === 'dark' ? darkMode : lightMode
+const metaTheme = defaultMode === 'dark' ? darkBackground : lightMode
 const siteTitle = i18nTitle ? currentUI.title : title
 const siteSubtitle = i18nTitle ? currentUI.subtitle : subtitle
 const siteDescription = i18nTitle ? currentUI.description : description
@@ -55,9 +56,9 @@ const pageImage = postSlug
 <meta name="theme-color" content={metaTheme} />
 
 <!-- Preload -->
-<link rel="preload" href={`${base}/fonts/EarlySummer-VF-Split/EarlySummer-VF-Subset.woff2`} as="font" type="font/woff2" crossorigin />
-<link rel="preload" href={`${base}/fonts/STIX-VF.woff2`} as="font" type="font/woff2" crossorigin />
-{katexEnabled && <link rel="stylesheet" href={katexCSS} media="print" onload={`this.media='all'`} />}
+{['zh', 'zh-tw', 'ja', 'ko'].includes(currentLang) && <link rel="preload" href={`${base}/fonts/EarlySummer-VF-Split/EarlySummer-VF-Subset.woff2`} as="font" type="font/woff2" crossorigin />}
+{themeConfig.global.fontStyle === 'serif' && <link rel="preload" href={`${base}/fonts/STIX-VF.woff2`} as="font" type="font/woff2" crossorigin />}
+{katexEnabled && hasMath && <link rel="stylesheet" href={katexCSS} />}
 
 <!-- Site Links -->
 <link rel="canonical" href={Astro.url} />
@@ -96,7 +97,7 @@ const pageImage = postSlug
   define:vars={{
     defaultMode,
     lightMode,
-    darkMode,
+    darkBackground,
     reduceMotion,
     isDev: import.meta.env.DEV,
  }}
@@ -129,7 +130,7 @@ const pageImage = postSlug
     // Update meta theme-color tag
     const metaThemeColor = doc.head.querySelector('meta[name="theme-color"]')
     if (metaThemeColor) {
-      metaThemeColor.setAttribute('content', isDark ? darkMode : lightMode)
+      metaThemeColor.setAttribute('content', isDark ? darkBackground : lightMode)
     }
   }
 

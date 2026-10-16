@@ -2,7 +2,7 @@
 import type { Language } from '@/i18n/config'
 import LanguageSwitcherIcon from '@/assets/icons/language-switcher.svg'
 import ThemeToggleIcon from '@/assets/icons/theme-toggle.svg'
-import { moreLocales, themeConfig } from '@/config'
+import { allLocales, themeConfig } from '@/config'
 import { getLangFromPath, getNextGlobalLang } from '@/i18n/lang'
 import {
   getLocalizedPath,
@@ -23,17 +23,18 @@ const {
 const { supportedLangs } = Astro.props
 const currentPath = Astro.url.pathname
 
-const showLanguageSwitcher = moreLocales.length > 0
+const showLanguageSwitcher = allLocales.length > 1
 const nextUrl
   = supportedLangs.length > 0
     ? getNextSupportedLangPath(currentPath, supportedLangs)
   : getNextGlobalLangPath(currentPath)
 const isPost = isPostPage(currentPath)
 const currentLang = getLangFromPath(currentPath)
-const nextLang = getNextGlobalLang(currentLang)
-const fallbackUrl = getLocalizedPath('/', nextLang)
+const nextGlobalLang = getNextGlobalLang(currentLang)
+const fallbackUrl = getLocalizedPath('/', nextGlobalLang)
 const isSingleLangPost = isPost && supportedLangs.length <= 1
 const targetUrl = isSingleLangPost ? fallbackUrl : nextUrl
+const nextLang = getLangFromPath(targetUrl)
 ---
 
 <div
@@ -58,6 +59,9 @@ const targetUrl = isSingleLangPost ? fallbackUrl : nextUrl
 
   <button
     id="theme-toggle-button"
+    data-light={lightMode}
+    data-dark={darkMode}
+    data-mode={themeConfig.color.mode}
     class="aspect-square w-4 c-secondary active:scale-90 hover:c-primary"
     aria-label="Switch light/dark theme"
   >
@@ -65,106 +69,51 @@ const targetUrl = isSingleLangPost ? fallbackUrl : nextUrl
   </button>
 </div>
 
-<script is:inline>
-  ;(() => {
-    const retypeset = window.__retypeset || (window.__retypeset = {})
-    const listeners = retypeset.listeners || (retypeset.listeners = {})
+<script>
+function applyTheme(isDark: boolean) {
+  const button = document.getElementById('theme-toggle-button')!
+  document.documentElement.classList.toggle('dark', isDark)
+  document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')!.content = (isDark ? button.dataset.dark : button.dataset.light)!
+  document.dispatchEvent(new Event('theme-changed'))
+}
 
-    if (!listeners.languageSwitcher) {
-      listeners.languageSwitcher = true
-      document.addEventListener('click', (e) => {
-        const target = e.target instanceof Element ? e.target : null
-        const link = target ? target.closest('#language-switcher') : null
-        if (!link) {
-          return
-        }
+function toggleTheme() {
+  const isDark = !document.documentElement.classList.contains('dark')
+  localStorage.setItem('theme', isDark ? 'dark' : 'light')
+  applyTheme(isDark)
+}
 
-        e.preventDefault()
-        const url = link.getAttribute('href')
-        const nextLang = link.getAttribute('data-next-lang')
-        if (nextLang) {
-          try {
-            localStorage.setItem('lang', nextLang)
-          }
-          catch {}
-        }
-        if (url) {
-          location.replace(url)
-        }
-      })
-    }
-  })()
-</script>
+document.addEventListener('click', (event) => {
+  if (!(event.target instanceof Element)) {
+    return
+  }
+  const languageLink = event.target.closest<HTMLAnchorElement>('#language-switcher')
+  if (languageLink && event.button === 0 && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
+    localStorage.setItem('lang', languageLink.dataset.nextLang!)
+  }
+  if (!event.target.closest('#theme-toggle-button')) {
+    return
+  }
 
-<script
-  is:inline
-  define:vars={{
-    lightMode,
-    darkMode,
-  }}
->
-  ;(() => {
-    const retypeset = window.__retypeset || (window.__retypeset = {})
-    const listeners = retypeset.listeners || (retypeset.listeners = {})
+  const root = document.documentElement
+  if (root.classList.contains('reduce-motion')) {
+    toggleTheme()
+    return
+  }
+  root.style.setProperty('view-transition-name', 'animation-theme-toggle')
+  root.setAttribute('data-theme-changing', '')
+  const transition = document.startViewTransition(toggleTheme)
+  const cleanup = () => {
+    root.style.removeProperty('view-transition-name')
+    root.removeAttribute('data-theme-changing')
+  }
+  transition.finished.then(cleanup, cleanup)
+})
 
-    function applyTheme(isDark) {
-      document.documentElement.classList.toggle('dark', isDark)
-
-      const metaThemeColor = document.head.querySelector('meta[name="theme-color"]')
-      if (metaThemeColor && lightMode && darkMode) {
-        metaThemeColor.setAttribute('content', isDark ? darkMode : lightMode)
-      }
-
-      localStorage.setItem('theme', isDark ? 'dark' : 'light')
-      document.dispatchEvent(new Event('theme-changed'))
-    }
-
-    function toggleTheme() {
-      const isDark = !document.documentElement.classList.contains('dark')
-      applyTheme(isDark)
-    }
-
-    function handleThemeToggleClick(e) {
-      const target = e.target instanceof Element ? e.target : null
-      const button = target?.closest('#theme-toggle-button')
-
-      if (!button) {
-        return
-      }
-
-      if (document.documentElement.classList.contains('reduce-motion')) {
-        toggleTheme()
-        return
-      }
-
-      document.documentElement.style.setProperty('view-transition-name', 'animation-theme-toggle')
-      document.documentElement.setAttribute('data-theme-changing', '')
-
-      const transition = document.startViewTransition(toggleTheme)
-
-      // Use finally so the orphaned style/attribute are cleared even if the
-      // transition is skipped (e.g. user navigates away mid-animation).
-      transition.finished.finally(() => {
-        document.documentElement.style.removeProperty('view-transition-name')
-        document.documentElement.removeAttribute('data-theme-changing')
-      })
-    }
-
-    if (!listeners.themeToggle) {
-      listeners.themeToggle = true
-      document.addEventListener('click', handleThemeToggleClick, { passive: true })
-
-      window
-        .matchMedia('(prefers-color-scheme: dark)')
-        .addEventListener('change', (event) => {
-          // Only follow the system preference when the user has not made an
-          // explicit choice via the theme toggle. Otherwise OS theme flips
-          // would silently overwrite the user's stored selection.
-          if (localStorage.getItem('theme')) {
-            return
-          }
-          applyTheme(event.matches)
-        })
-    }
-  })()
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (event) => {
+  const button = document.getElementById('theme-toggle-button')!
+  if (button.dataset.mode === 'auto' && !localStorage.getItem('theme')) {
+    applyTheme(event.matches)
+  }
+})
 </script>

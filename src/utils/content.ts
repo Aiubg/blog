@@ -7,31 +7,17 @@ import { allLocales, defaultLocale } from '@/config'
 import { langMap } from '@/i18n/config'
 import { memoize } from '@/utils/cache'
 
-const metaCache = new Map<string, { minutes: number }>()
+const getVisiblePosts = memoize(() => getCollection('posts', post => import.meta.env.DEV || !post.data.draft))
 
-/**
- * Add metadata including reading time to a post
- *
- * @param post The post to enhance with metadata
- * @returns Enhanced post with reading time information
- */
 async function addMetaToPost(post: CollectionEntry<'posts'>): Promise<Post> {
-  const cacheKey = `${post.id}-${getPostLang(post) || 'universal'}`
-  const cachedMeta = metaCache.get(cacheKey)
-  if (cachedMeta) {
-    return {
-      ...post,
-      remarkPluginFrontmatter: cachedMeta,
-    }
-  }
-
-  const { remarkPluginFrontmatter } = await render(post)
-  const meta = remarkPluginFrontmatter as { minutes: number }
-  metaCache.set(cacheKey, meta)
+  // Markdown metadata is already produced by the content loader. MDX needs render().
+  const metadata = post.rendered?.metadata
+    ? post.rendered.metadata.frontmatter
+    : (await render(post)).remarkPluginFrontmatter
 
   return {
     ...post,
-    remarkPluginFrontmatter: meta,
+    remarkPluginFrontmatter: metadata as Post['remarkPluginFrontmatter'],
   }
 }
 
@@ -49,9 +35,9 @@ export function getPostLang(post: CollectionEntry<'posts'>): '' | Language {
 }
 
 export function getPostGroupKey(post: CollectionEntry<'posts'>): string {
-  const customId = (post.data as { id?: string }).id
-  if (customId && customId.trim()) {
-    return customId.trim()
+  const customId = post.data.id.trim()
+  if (customId) {
+    return customId
   }
   const id = post.id
   const segments = id.split('/')
@@ -84,32 +70,25 @@ export function getPostSlug(post: CollectionEntry<'posts'>): string {
  * @param posts Array of blog posts to check
  * @returns Array of descriptive error messages for duplicate slugs
  */
-export async function checkPostSlugDuplication(posts: CollectionEntry<'posts'>[]): Promise<string[]> {
-  const slugMap = new Map<string, Set<string>>()
+export function checkPostSlugDuplication(posts: CollectionEntry<'posts'>[]): string[] {
+  const routes = new Map<string, string>()
   const duplicates: string[] = []
 
-  posts.forEach((post) => {
-    const lang = getPostLang(post)
+  for (const post of posts) {
+    const language = getPostLang(post)
+    const languages = language ? [language] : allLocales
     const slug = getPostSlug(post)
-
-    let slugSet = slugMap.get(lang || 'universal')
-    if (!slugSet) {
-      slugSet = new Set()
-      slugMap.set(lang || 'universal', slugSet)
+    for (const lang of languages) {
+      const route = `${lang}/${slug}`
+      const previous = routes.get(route)
+      if (previous !== undefined) {
+        duplicates.push(`Duplicate post route "${route}": "${previous}" and "${post.id}"`)
+      }
+      else {
+        routes.set(route, post.id)
+      }
     }
-
-    if (!slugSet.has(slug)) {
-      slugSet.add(slug)
-      return
-    }
-
-    if (!lang) {
-      duplicates.push(`Duplicate slug "${slug}" found in universal posts`)
-    }
-    else {
-      duplicates.push(`Duplicate slug "${slug}" found in "${lang}" language posts`)
-    }
-  })
+  }
 
   return duplicates
 }
@@ -123,14 +102,11 @@ export async function checkPostSlugDuplication(posts: CollectionEntry<'posts'>[]
 async function _getPosts(lang?: Language) {
   const currentLang = lang || defaultLocale
 
-  const filteredPosts = await getCollection(
-    'posts',
-    (post: CollectionEntry<'posts'>) => {
-      const shouldInclude = import.meta.env.DEV || !post.data.draft
-      const pLang = getPostLang(post)
-      return shouldInclude && (pLang === currentLang || pLang === '')
-    },
-  )
+  const posts = await getVisiblePosts()
+  const filteredPosts = posts.filter((post) => {
+    const postLang = getPostLang(post)
+    return postLang === currentLang || postLang === ''
+  })
 
   const enhancedPosts = await Promise.all(filteredPosts.map(addMetaToPost))
 
@@ -189,16 +165,8 @@ async function _getPostsByYear(lang?: Language): Promise<Map<number, Post[]>> {
     yearPosts.push(post)
   })
 
-  // Sort posts within each year by date
-  yearMap.forEach((yearPosts) => {
-    yearPosts.sort((a, b) => {
-      const aDate = a.data.published
-      const bDate = b.data.published
-      return bDate.getMonth() - aDate.getMonth() || bDate.getDate() - aDate.getDate()
-    })
-  })
-
-  return new Map([...yearMap.entries()].sort((a, b) => b[0] - a[0]))
+  // getRegularPosts() already orders posts and years from newest to oldest.
+  return yearMap
 }
 
 export const getPostsByYear = memoize(_getPostsByYear)
@@ -266,10 +234,7 @@ export const getPostsByTag = memoize(_getPostsByTag)
  * @returns Array of language codes that support the specified tag
  */
 async function _getTagSupportedLangs(tag: string): Promise<Language[]> {
-  const posts = await getCollection(
-    'posts',
-    post => !post.data.draft,
-  )
+  const posts = await getVisiblePosts()
   const langs = new Set<Language>()
   posts.forEach((post) => {
     if (post.data.tags?.includes(tag)) {

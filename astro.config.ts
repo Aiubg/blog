@@ -1,3 +1,5 @@
+import { fileURLToPath } from 'node:url'
+import { unified } from '@astrojs/markdown-remark'
 import mdx from '@astrojs/mdx'
 import partytown from '@astrojs/partytown'
 import sitemap from '@astrojs/sitemap'
@@ -29,9 +31,10 @@ export default defineConfig({
   site,
   base,
   trailingSlash: 'always', // Not recommended to change
+  compressHTML: true,
   prefetch: {
     prefetchAll: true,
-    defaultStrategy: 'viewport', // hover, tap, viewport, load
+    defaultStrategy: 'hover',
   },
   ...imageConfig,
   i18n: {
@@ -50,37 +53,39 @@ export default defineConfig({
       injectReset: true,
     }),
     mdx(),
-    partytown({
+    Boolean(themeConfig.seo?.googleAnalyticsID || themeConfig.seo?.umamiAnalyticsID) && partytown({
       config: {
         forward: ['dataLayer.push', 'gtag'],
       },
     }),
     sitemap(),
     Compress({
-      CSS: true,
+      CSS: false, // Vite already minifies CSS and JavaScript.
       HTML: true,
       Image: false,
-      JavaScript: true,
+      JavaScript: false,
       SVG: false,
     }),
   ],
   markdown: {
-    remarkPlugins: [
-      remarkDirective,
-      remarkMath,
-      remarkContainerDirectives,
-      remarkLeafDirectives,
-      remarkReadingTime,
-    ],
-    rehypePlugins: [
-      rehypeKatex,
-      [rehypeMermaid, { strategy: 'pre-mermaid' }],
-      rehypeSlug,
-      rehypeHeadingAnchor,
-      rehypeImageProcessor,
-      rehypeExternalLinks,
-      rehypeCodeCopyButton,
-    ],
+    processor: unified({
+      remarkPlugins: [
+        remarkDirective,
+        remarkMath,
+        remarkContainerDirectives,
+        remarkLeafDirectives,
+        remarkReadingTime,
+      ],
+      rehypePlugins: [
+        rehypeKatex,
+        [rehypeMermaid, { strategy: 'pre-mermaid' }],
+        rehypeSlug,
+        rehypeHeadingAnchor,
+        rehypeImageProcessor,
+        rehypeExternalLinks,
+        rehypeCodeCopyButton,
+      ],
+    }),
     syntaxHighlight: {
       type: 'shiki',
       excludeLangs: ['mermaid'],
@@ -94,6 +99,13 @@ export default defineConfig({
     },
   },
   vite: {
+    resolve: {
+      // Twikoo 2 only exports its main bundle. Resolve the separate stylesheet
+      // and the bundle containing every locale relative to that public entry.
+      alias: {
+        'twikoo/dist': fileURLToPath(new URL('.', import.meta.resolve('twikoo'))),
+      },
+    },
     plugins: [
       {
         name: 'prefix-font-urls-with-base',

@@ -7,6 +7,7 @@ import { getPostLang } from '@/utils/content'
 type ExcerptScene = 'list' | 'meta' | 'og' | 'feed'
 
 const markdownParser = new MarkdownIt()
+const renderedExcerpts = new WeakMap<CollectionEntry<'posts'>, string>()
 const excerptLengths: Record<ExcerptScene, { cjk: number, other: number }> = {
   list: {
     cjk: 120,
@@ -88,7 +89,12 @@ export function getPostDescription(
       : post.data.description
   }
 
-  const rawContent = post.body || ''
+  const cached = renderedExcerpts.get(post)
+  if (cached !== undefined) {
+    return getExcerpt(cached, lang, scene)
+  }
+
+  const rawContent = post.body ?? ''
   const cleanContent = rawContent
     .replace(/<!--[\s\S]*?-->/g, '') // Remove HTML comments
     .replace(/```[\s\S]*?```/g, '') // Remove code blocks
@@ -98,5 +104,6 @@ export function getPostDescription(
     .replace(/\n{2,}/g, '\n\n') // Normalize newlines
 
   const renderedContent = markdownParser.render(cleanContent)
+  renderedExcerpts.set(post, renderedContent)
   return getExcerpt(renderedContent, lang, scene)
 }
