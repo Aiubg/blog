@@ -39,6 +39,8 @@ Retypeset 是一款基于 [Astro](https://astro.build/) 框架的静态博客主
 
 请使用 Node.js 22.22.1 或更高版本。项目使用 TypeScript 7 的 `tsc` 编译器，并通过官方 TypeScript 6 兼容包提供 Astro Check 和 ESLint 所需的 API。
 
+Cloudflare Pages 通过 `.node-version` 选择已验证的 Node.js 版本。如果项目设置了 `NODE_VERSION` 环境变量，请将生产环境与预览环境中的该变量同步为文件指定的版本。
+
 1. [Fork](https://github.com/radishzzz/astro-theme-retypeset/fork) 此仓库，或使用此模版创建新仓库。
 2. 在终端执行以下指令：
 

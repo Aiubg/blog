@@ -41,6 +41,8 @@ Retypeset is a static blog theme based on the [Astro](https://astro.build/) fram
 
 Use Node.js 22.22.1 or newer. TypeScript 7 provides the `tsc` compiler; the official TypeScript 6 compatibility package supplies the API required by Astro Check and ESLint.
 
+Cloudflare Pages reads `.node-version` to select the tested Node.js version. If the project defines a `NODE_VERSION` environment variable, keep it aligned with this file for both production and preview builds.
+
 1. [Fork](https://github.com/radishzzz/astro-theme-retypeset/fork) this repository, or use this template to create a new repository.
 2. Run the following commands in your terminal:
 
