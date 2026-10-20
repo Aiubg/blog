@@ -37,7 +37,7 @@ export const themeConfig: ThemeConfig = {
       // 用于文章文本
       secondary: 'oklch(0.40 0.02 75)',
       // 背景颜色
-      background: 'oklch(0.97 0.035 95)',
+      background: 'oklch(0.985 0.02 95)',
       // 高亮颜色
       // 用于导航栏、选中文本等
       highlight: 'oklch(0.88 0.10 90 / 0.45)',
