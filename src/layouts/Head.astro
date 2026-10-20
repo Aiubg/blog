@@ -21,7 +21,7 @@ const lang = currentLang === defaultLocale ? '' : `${currentLang}/`
 // Site Configuration
 const { title, subtitle, description, i18nTitle, author, favicon } = themeConfig.site
 const { mode: defaultMode, light: { background: lightMode }, dark: { background: darkBackground } } = themeConfig.color
-const { katex: katexEnabled, reduceMotion } = themeConfig.global
+const { katex: katexEnabled, animations, reduceMotion } = themeConfig.global
 const { verification = {}, twitterID = '', googleAnalyticsID = '', umamiAnalyticsID = '', apiflashKey = '' } = themeConfig.seo ?? {}
 const { google = '', bing = '', yandex = '', baidu = '' } = verification
 const { customGoogleAnalyticsJS = '', customUmamiAnalyticsJS = '' } = themeConfig.preload ?? {}
@@ -98,6 +98,7 @@ const pageImage = postSlug
     defaultMode,
     lightMode,
     darkBackground,
+    animations,
     reduceMotion,
     isDev: import.meta.env.DEV,
  }}
@@ -139,8 +140,9 @@ const pageImage = postSlug
   function initMotionPref(doc = document) {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const supportsViewTransitions = 'startViewTransition' in doc
-    const shouldReduceMotion = reduceMotion || prefersReducedMotion || !supportsViewTransitions
+    const shouldReduceMotion = !animations || reduceMotion || prefersReducedMotion || !supportsViewTransitions
 
+    doc.documentElement.classList.toggle('animations-disabled', !animations)
     doc.documentElement.classList.toggle('reduce-motion', shouldReduceMotion)
   }
 

@@ -62,6 +62,7 @@ export interface ThemeConfig {
     dateFormat: 'YYYY-MM-DD' | 'MM-DD-YYYY' | 'DD-MM-YYYY' | 'MMM D YYYY' | 'D MMM YYYY'
     toc: boolean
     katex: boolean
+    animations: boolean
     reduceMotion: boolean
   }
   comment: {

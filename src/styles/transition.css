@@ -70,23 +70,22 @@ html[data-theme-changing] [data-disable-theme-transition] {
 
 @media (max-width: 1535px) {
   #toc-container {
-    opacity: 0;
-    animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
     animation-delay: 0.1s;
   }
 }
 
 @media (min-width: 1024px) {
   #post-date {
-    opacity: 0;
-    animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
     animation-delay: 0.1s;
   }
 }
 
-#post-content>* {
-  opacity: 0;
-  animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+/* Keep animation work bounded even for book-length posts. Backwards fill
+   hides delayed items, then releases their transforms when they finish. */
+#post-content>*:nth-child(-n+7) {
+  animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 #post-content>*:nth-child(1) {
@@ -117,50 +116,6 @@ html[data-theme-changing] [data-disable-theme-transition] {
   animation-delay: 0.45s;
 }
 
-#post-content>*:nth-child(8) {
-  animation-delay: 0.5s;
-}
-
-#post-content>*:nth-child(9) {
-  animation-delay: 0.55s;
-}
-
-#post-content>*:nth-child(10) {
-  animation-delay: 0.6s;
-}
-
-#post-content>*:nth-child(11) {
-  animation-delay: 0.65s;
-}
-
-#post-content>*:nth-child(12) {
-  animation-delay: 0.7s;
-}
-
-#post-content>*:nth-child(13) {
-  animation-delay: 0.75s;
-}
-
-#post-content>*:nth-child(14) {
-  animation-delay: 0.8s;
-}
-
-#post-content>*:nth-child(15) {
-  animation-delay: 0.85s;
-}
-
-#post-content>*:nth-child(n+16) {
-  animation-delay: 0.9s;
-}
-
-@media (max-width: 767px) {
-  #post-content>*:nth-child(n+8) {
-    opacity: 1;
-    transform: translateY(0);
-    animation: none;
-  }
-}
-
 /* TOC Progressive Animation >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 @keyframes fadeInUpMini {
   from {
@@ -174,16 +129,14 @@ html[data-theme-changing] [data-disable-theme-transition] {
   }
 }
 
-@media (min-width: 1535px) {
+@media (min-width: 1536px) {
   #toc-desktop-icon {
-    opacity: 0;
-    animation: fadeInUpMini 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation: fadeInUpMini 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
     animation-delay: 0.175s;
   }
 
-  #toc-links-list>* {
-    opacity: 0;
-    animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  #toc-links-list>*:nth-child(-n+18) {
+    animation: fadeInUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   }
 
 
@@ -259,9 +212,6 @@ html[data-theme-changing] [data-disable-theme-transition] {
     animation-delay: 0.6s;
   }
 
-  #toc-links-list>*:nth-child(n+19) {
-    animation-delay: 0.625s;
-  }
 }
 
 /* Back Button Animation >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
@@ -279,8 +229,7 @@ html[data-theme-changing] [data-disable-theme-transition] {
 
 @media (min-width: 1024px) {
   #back-button {
-    opacity: 0;
-    animation: fadeInLeft 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    animation: fadeInLeft 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
     animation-delay: 0.2s;
   }
 }
@@ -304,4 +253,21 @@ html.reduce-motion {
     transform: translate(0);
     animation: none;
   }
+}
+
+/* The configuration switch also disables small interaction transitions and
+   named view transitions while keeping Astro's client navigation available. */
+html.animations-disabled,
+html.animations-disabled *,
+html.animations-disabled *::before,
+html.animations-disabled *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+  view-transition-name: none !important;
+}
+
+html.animations-disabled::view-transition-old(*),
+html.animations-disabled::view-transition-new(*) {
+  animation: none !important;
 }

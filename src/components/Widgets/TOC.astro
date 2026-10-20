@@ -137,21 +137,33 @@ const is2xl = window.matchMedia('(min-width: 1536px)')
 let ticking = false
 let lastLink: Element | null = null
 let tocList: HTMLElement | null = null
+let tocContent: HTMLElement | null = null
 
 document.addEventListener('astro:page-load', () => {
   tocList = document.getElementById('toc-links-list')
+  tocContent = document.getElementById('toc-accordion-content')
   lastLink = null
 })
 
 function updateScroll() {
-  if (!tocList) {
+  if (!tocList || !tocContent || !is2xl.matches) {
     ticking = false
     return
   }
 
   const activeLink = tocList.querySelector('a:target-current')
   if (activeLink && activeLink !== lastLink) {
-    activeLink.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    // Scroll only the TOC; scrollIntoView can also move the article viewport.
+    const linkRect = activeLink.getBoundingClientRect()
+    const contentRect = tocContent.getBoundingClientRect()
+    const top = contentRect.top + tocContent.clientTop
+    const bottom = top + tocContent.clientHeight
+    if (linkRect.top < top || linkRect.bottom > bottom) {
+      tocContent.scrollBy({
+        top: linkRect.top < top ? linkRect.top - top : linkRect.bottom - bottom,
+        behavior: document.documentElement.classList.contains('reduce-motion') ? 'instant' : 'smooth',
+      })
+    }
     lastLink = activeLink
   }
 

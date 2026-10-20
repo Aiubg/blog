@@ -74,7 +74,8 @@ const ImageZoom = {
     if (!this.zoomedImg) {
       return
     }
-    this.zoomedImg.style.transition = animate ? 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' : 'none'
+    const shouldAnimate = animate && !document.documentElement.classList.contains('reduce-motion')
+    this.zoomedImg.style.transition = shouldAnimate ? 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' : 'none'
     this.zoomedImg.style.transform = `translate3d(${this.state.x}px, ${this.state.y}px, 0) scale(${this.state.scale})`
   },
 
@@ -158,7 +159,7 @@ const ImageZoom = {
       }
       this.originalImg = null
       this.rect = null
-    }, CLOSE_DURATION_MS)
+    }, document.documentElement.classList.contains('reduce-motion') ? 0 : CLOSE_DURATION_MS)
   },
 
   zoomAt(clientX: number, clientY: number, factor: number) {
