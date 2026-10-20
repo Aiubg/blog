@@ -177,9 +177,15 @@ const pageImage = postSlug
   // Update theme before page transition to prevent flashing
   if (!listeners.themeInit) {
     listeners.themeInit = true
-    document.addEventListener('astro:before-swap', ({ newDocument }) => {
+    document.addEventListener('astro:before-swap', ({ newDocument, viewTransition }) => {
       initTheme(newDocument)
       initMotionPref(newDocument)
+      // CSS alone hides the animation but still lets the browser prepare it.
+      if (newDocument.documentElement.classList.contains('reduce-motion')) {
+        // Skipping intentionally rejects the native transition's ready promise.
+        viewTransition.ready.catch(() => {})
+        viewTransition.skipTransition()
+      }
     })
   }
 

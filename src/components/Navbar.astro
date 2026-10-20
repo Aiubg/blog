@@ -53,6 +53,7 @@ const navItems = [
       <li>
         <a
           href={getLocalizedPath(item.href)}
+          data-astro-prefetch="load"
           class={item.className}
         >
           {item.label}
